@@ -223,7 +223,6 @@ body {
     </div>
     <div class="chat-input-row">
       <textarea class="chat-input" id="chat-input" rows="1" placeholder="メッセージを入力..."
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"
         tabindex="1"></textarea>
       <button class="send-btn" id="send-btn" onclick="sendChat()" tabindex="2">送信</button>
     </div>
@@ -241,7 +240,7 @@ const STATUS_INFO = {
 };
 
 let myKey = null;
-let currentStatus = 'off';
+let currentStatus = 'off'; // デフォルト停止中
 let chatInterval = null;
 let statusInterval = null;
 
@@ -271,10 +270,13 @@ function selectUser(key) {
   document.getElementById('my-name').textContent = USERS[key];
   document.getElementById('other-name').textContent = USERS[key === 'A' ? 'B' : 'A'];
   try {
-    const s = localStorage.getItem('gw_page_status_' + key);
+    const s = sessionStorage.getItem('gw_page_status_' + key);
     if (s && STATUS_INFO[s]) currentStatus = s;
-  } catch(e){}
+    else currentStatus = 'off';
+  } catch(e){ currentStatus = 'off'; }
   updateMyUI();
+  // ページ開いたとき自分のステータスをGASに送信
+  setStatus(currentStatus);
   fetchStatus();
   statusInterval = setInterval(fetchStatus, 30000);
 }
@@ -309,7 +311,7 @@ function updateMyUI() {
 
 async function setStatus(status) {
   currentStatus = status;
-  try { localStorage.setItem('gw_page_status_' + myKey, status); } catch(e){}
+  try { sessionStorage.setItem('gw_page_status_' + myKey, status); } catch(e){}
   updateMyUI();
   try {
     await gasRequest({ key: myKey, active: status !== 'off', status: status });
@@ -382,7 +384,6 @@ async function sendChat() {
   } catch(e) { input.value = msg; }
   btn.disabled = false;
   input.focus();
-  input.setSelectionRange(0, 0);
 }
 
 function escHtml(s) {
