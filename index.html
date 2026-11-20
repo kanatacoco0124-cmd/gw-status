@@ -238,6 +238,7 @@ let chatInterval = null;
 let statusInterval = null;
 let unreadInterval = null;
 let lastUnreadCount = 0;
+let lastSeenMsgTime = null;
 let notifPermission = 'default';
 
 function requestNotifPermission() {
@@ -288,6 +289,7 @@ function selectUser(key) {
   setStatus(currentStatus);
   fetchStatus();
   statusInterval = setInterval(fetchStatus, 30000);
+  try { lastSeenMsgTime = localStorage.getItem('gw_eu_seen_' + key) || null; } catch(e) {}
   requestNotifPermission();
   checkUnread();
   unreadInterval = setInterval(checkUnread, 10000);
@@ -299,6 +301,7 @@ function switchUser() {
   if (chatInterval) clearInterval(chatInterval);
   if (unreadInterval) { clearInterval(unreadInterval); unreadInterval = null; }
   lastUnreadCount = 0;
+  lastSeenMsgTime = null;
   updateChatTabBadge(0);
   document.getElementById('select-screen').style.display = 'flex';
   document.getElementById('main-screen').style.display = 'none';
@@ -316,21 +319,20 @@ function updateChatTabBadge(count) {
 async function checkUnread() {
   if (!myKey) return;
   const otherKey = OTHER[myKey];
-  // チャットタブ開いてるときは既読になるのでスキップ
   const chatVisible = document.getElementById('chat-tab').style.display === 'block';
   if (chatVisible) { updateChatTabBadge(0); lastUnreadCount = 0; return; }
   try {
+    // getChat with both from and to — GAS marks messages as read on the server side.
+    // To avoid that, we pass from=myKey but check against lastSeenMsgTime stored locally.
+    // lastSeenMsgTime is set when the chat tab is opened, so messages after that time are "unread".
     const data = await gasRequest({ action: 'getChat', from: myKey, to: otherKey, t: Date.now() });
     const msgs = data.messages || [];
-    // 未読：自分宛で自分がreadByに入ってないもの（既読更新しないようにfromだけ取得）
-    const unread = msgs.filter(m => m.from !== myKey && (!m.readBy || m.readBy.indexOf(myKey) === -1)).length;
+    const unreadMsgs = msgs.filter(m => m.from !== myKey && (!lastSeenMsgTime || m.time > lastSeenMsgTime));
+    const unread = unreadMsgs.length;
     updateChatTabBadge(unread);
-    if (unread > lastUnreadCount && lastUnreadCount >= 0) {
-      const newMsgs = msgs.filter(m => m.from !== myKey && (!m.readBy || m.readBy.indexOf(myKey) === -1));
-      if (newMsgs.length > 0) {
-        const last = newMsgs[newMsgs.length - 1];
-        showNotif(USERS[last.from] + ': ' + last.msg.substring(0, 50));
-      }
+    if (unread > lastUnreadCount && unreadMsgs.length > 0) {
+      const last = unreadMsgs[unreadMsgs.length - 1];
+      showNotif(USERS[last.from] + ': ' + last.msg.substring(0, 50));
     }
     lastUnreadCount = unread;
   } catch(e) {}
@@ -344,6 +346,8 @@ function showTab(tab) {
   if (tab === 'chat') {
     updateChatTabBadge(0);
     lastUnreadCount = 0;
+    lastSeenMsgTime = new Date().toISOString();
+    try { localStorage.setItem('gw_eu_seen_' + myKey, lastSeenMsgTime); } catch(e) {}
     fetchChat();
     if (!chatInterval) chatInterval = setInterval(fetchChat, 10000);
   } else {
