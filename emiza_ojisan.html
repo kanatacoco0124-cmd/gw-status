@@ -47,7 +47,7 @@ body {
 
 /* 選択画面 */
 #select-screen {
-  display: flex; flex-direction: column; align-items: center;
+  display: none; flex-direction: column; align-items: center;
   justify-content: center; min-height: 100vh; gap: 1rem;
 }
 #select-screen h1 { font-size: 1.1rem; color: var(--fg2); margin: 0 0 0.5rem; }
@@ -171,7 +171,7 @@ body {
 <body>
 
 <!-- 選択画面 -->
-<div id="select-screen">
+<div id="select-screen" style="display:none">
   <h1>あなたはどちらですか？</h1>
   <button class="select-btn" onclick="selectUser('A')">えみざ</button>
   <button class="select-btn" onclick="selectUser('C')">Mなおじさん</button>
@@ -236,6 +236,23 @@ let myKey = null;
 let currentStatus = 'off';
 let chatInterval = null;
 let statusInterval = null;
+let unreadInterval = null;
+let lastUnreadCount = 0;
+let lastSeenMsgTime = null;
+let notifPermission = 'default';
+
+function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'granted') { notifPermission = 'granted'; return; }
+  if (Notification.permission !== 'denied') {
+    Notification.requestPermission().then(p => { notifPermission = p; });
+  }
+}
+
+function showNotif(msg) {
+  if (notifPermission !== 'granted') return;
+  try { new Notification('💬 新しいメッセージ', { body: msg, icon: '' }); } catch(e) {}
+}
 
 function gasRequest(params) {
   return new Promise((resolve, reject) => {
@@ -270,15 +287,50 @@ function selectUser(key) {
   setStatus(currentStatus);
   fetchStatus();
   statusInterval = setInterval(fetchStatus, 30000);
+  try { lastSeenMsgTime = localStorage.getItem('gw_ec_seen_' + key) || null; } catch(e) {}
+  requestNotifPermission();
+  checkUnread();
+  unreadInterval = setInterval(checkUnread, 10000);
 }
 
 function switchUser() {
   myKey = null;
   if (statusInterval) clearInterval(statusInterval);
   if (chatInterval) clearInterval(chatInterval);
+  if (unreadInterval) { clearInterval(unreadInterval); unreadInterval = null; }
+  lastUnreadCount = 0;
+  lastSeenMsgTime = null;
+  updateChatTabBadge(0);
   document.getElementById('select-screen').style.display = 'flex';
   document.getElementById('main-screen').style.display = 'none';
   showTab('status');
+}
+
+function updateChatTabBadge(count) {
+  const btn = document.getElementById('tab-chat');
+  if (!btn) return;
+  btn.textContent = count > 0 ? `💬 チャット (${count})` : '💬 チャット';
+  if (count > 0) btn.style.color = 'var(--accent)';
+  else btn.style.color = '';
+}
+
+async function checkUnread() {
+  if (!myKey) return;
+  const otherKey = OTHER[myKey];
+  const chatVisible = document.getElementById('chat-tab').style.display === 'block';
+  if (chatVisible) { updateChatTabBadge(0); lastUnreadCount = 0; return; }
+  try {
+    const data = await gasRequest({ action: 'getChat', from: myKey, to: otherKey, t: Date.now() });
+    const msgs = data.messages || [];
+    const unreadMsgs = msgs.filter(m => m.from !== myKey && (!lastSeenMsgTime || m.time > lastSeenMsgTime));
+    const unread = unreadMsgs.length;
+    updateChatTabBadge(unread);
+    if (unread > lastUnreadCount && unreadMsgs.length > 0) {
+      const last = unreadMsgs[unreadMsgs.length - 1];
+      showNotif(USERS[last.from] + ': ' + last.msg.substring(0, 50));
+    }
+    lastUnreadCount = unread;
+  } catch(e) {}
 }
 
 function showTab(tab) {
@@ -287,6 +339,10 @@ function showTab(tab) {
   document.getElementById('tab-status').className = 'tab-btn' + (tab === 'status' ? ' active' : '');
   document.getElementById('tab-chat').className = 'tab-btn' + (tab === 'chat' ? ' active' : '');
   if (tab === 'chat') {
+    updateChatTabBadge(0);
+    lastUnreadCount = 0;
+    lastSeenMsgTime = new Date().toISOString();
+    try { localStorage.setItem('gw_ec_seen_' + myKey, lastSeenMsgTime); } catch(e) {}
     fetchChat();
     if (!chatInterval) chatInterval = setInterval(fetchChat, 10000);
   } else {
@@ -394,7 +450,10 @@ function escHtml(s) {
 try {
   const saved = localStorage.getItem('gw_ec_user');
   if (saved && USERS[saved]) selectUser(saved);
-} catch(e) {}
+  else document.getElementById('select-screen').style.display = 'flex';
+} catch(e) {
+  document.getElementById('select-screen').style.display = 'flex';
+}
 </script>
 </body>
 </html>
