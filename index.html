@@ -1,0 +1,395 @@
+<title>稼働状態ページ</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+
+<style>
+:root {
+  --bg: #fafafa;
+  --bg2: #ffffff;
+  --fg: #1a1a1a;
+  --fg2: #666;
+  --accent: #c0657a;
+  --accent-soft: #f5e8eb;
+  --green: #22aa22;
+  --green-soft: #e8f5e8;
+  --yellow: #d09020;
+  --yellow-soft: #fdf5e0;
+  --blue: #4070c0;
+  --blue-soft: #e8eeff;
+  --border: #e8e0e2;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1618; --bg2: #221e20; --fg: #f0eaec; --fg2: #a89498;
+    --accent: #d4849a; --accent-soft: #2e1e23;
+    --green: #44cc44; --green-soft: #1a2e1a;
+    --yellow: #d4a040; --yellow-soft: #2e2010;
+    --blue: #6090e0; --blue-soft: #101828;
+    --border: #3a2e31; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1618; --bg2: #221e20; --fg: #f0eaec; --fg2: #a89498;
+  --accent: #d4849a; --accent-soft: #2e1e23;
+  --green: #44cc44; --green-soft: #1a2e1a;
+  --yellow: #d4a040; --yellow-soft: #2e2010;
+  --blue: #6090e0; --blue-soft: #101828;
+  --border: #3a2e31; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0;
+}
+
+/* ===== ユーザー選択 ===== */
+#select-screen {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 100vh; gap: 1rem;
+}
+#select-screen h1 { font-size: 1.2rem; color: var(--fg2); margin: 0 0 0.5rem; }
+.select-btn {
+  width: 200px; padding: 1rem;
+  border: 2px solid var(--border); border-radius: var(--radius);
+  background: var(--bg2); color: var(--fg);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 1.1rem; font-weight: 700;
+  cursor: pointer; transition: border-color 0.15s, background 0.15s;
+}
+.select-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+/* ===== タブ ===== */
+#main-screen { display: none; max-width: 500px; margin: 0 auto; padding-block: 1.5rem; }
+.top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1.2rem;
+}
+.top-bar span { color: var(--fg2); font-size: 0.9rem; }
+.top-bar strong { color: var(--accent); }
+.switch-btn {
+  font-size: 0.8rem; color: var(--fg2); background: none;
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 0.3rem 0.8rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif;
+}
+.tabs {
+  display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.2rem;
+}
+.tab-btn {
+  flex: 1; padding: 0.7rem; background: none; border: none;
+  font-family: 'Noto Sans JP', sans-serif; font-size: 0.95rem; font-weight: 500;
+  color: var(--fg2); cursor: pointer; border-bottom: 2px solid transparent;
+  margin-bottom: -2px; transition: color 0.15s;
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+
+/* ===== ステータス画面 ===== */
+.card {
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 1.3rem 1.5rem; margin-bottom: 1rem;
+}
+.card-label {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--fg2); margin-bottom: 0.8rem;
+}
+.name-row {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;
+}
+.name-row .name { font-size: 1.1rem; font-weight: 700; }
+.status-buttons { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.status-opt {
+  flex: 1; min-width: 70px; padding: 0.6rem 0.4rem;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  background: var(--bg); color: var(--fg2);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 0.82rem; font-weight: 500;
+  cursor: pointer; text-align: center; transition: all 0.15s;
+}
+.status-opt.active-work { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+.status-opt.active-posting { border-color: var(--yellow); background: var(--yellow-soft); color: var(--yellow); }
+.status-opt.active-saving { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+.status-opt.active-off { border-color: var(--border); background: var(--bg2); color: var(--fg2); font-weight: 700; }
+
+.other-row {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.other-name { font-size: 1.05rem; font-weight: 700; }
+.other-st { font-size: 0.9rem; font-weight: 700; color: var(--fg2); }
+.other-st.work { color: var(--green); }
+.other-st.posting { color: var(--yellow); }
+.other-st.saving { color: var(--blue); }
+.upd-time { font-size: 0.75rem; color: var(--fg2); margin-top: 0.3rem; }
+.refresh-row { display: flex; justify-content: flex-end; margin-top: 0.6rem; }
+.refresh-btn {
+  background: none; border: 1px solid var(--border); border-radius: 20px;
+  padding: 0.3rem 0.9rem; font-size: 0.82rem; color: var(--fg2);
+  cursor: pointer; font-family: 'Noto Sans JP', sans-serif;
+}
+
+/* ===== チャット画面 ===== */
+#chat-tab { display: none; }
+.chat-box {
+  background: var(--bg2); border: 1.5px solid var(--border);
+  border-radius: var(--radius); height: 340px; overflow-y: auto;
+  padding: 1rem; margin-bottom: 0.8rem;
+  display: flex; flex-direction: column; gap: 0.6rem;
+}
+.msg-row { display: flex; flex-direction: column; max-width: 80%; }
+.msg-row.mine { align-self: flex-end; align-items: flex-end; }
+.msg-row.theirs { align-self: flex-start; align-items: flex-start; }
+.msg-name { font-size: 0.72rem; color: var(--fg2); margin-bottom: 0.2rem; }
+.msg-bubble {
+  padding: 0.5rem 0.9rem; border-radius: 16px;
+  font-size: 0.9rem; line-height: 1.5; word-break: break-word;
+}
+.msg-row.mine .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+.msg-row.theirs .msg-bubble { background: var(--border); color: var(--fg); border-bottom-left-radius: 4px; }
+.msg-time { font-size: 0.68rem; color: var(--fg2); margin-top: 0.2rem; }
+.chat-empty { color: var(--fg2); font-size: 0.9rem; text-align: center; margin: auto; }
+
+.chat-input-row { display: flex; gap: 0.6rem; align-items: flex-end; }
+.chat-input {
+  flex: 1; padding: 0.7rem 1rem;
+  border: 1.5px solid var(--border); border-radius: 20px;
+  background: var(--bg2); color: var(--fg);
+  font-family: 'Noto Sans JP', sans-serif; font-size: 0.93rem;
+  outline: none; resize: none;
+}
+.chat-input:focus { border-color: var(--accent); }
+.send-btn {
+  padding: 0.7rem 1.2rem; background: var(--accent); color: #fff;
+  border: none; border-radius: 20px;
+  font-family: 'Noto Sans JP', sans-serif; font-size: 0.9rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.send-btn:disabled { opacity: 0.5; cursor: default; }
+</style>
+
+<!-- 選択画面 -->
+<div id="select-screen">
+  <h1>あなたはどちらですか？</h1>
+  <button class="select-btn" onclick="selectUser('A')">えみざ</button>
+  <button class="select-btn" onclick="selectUser('B')">うみ家</button>
+</div>
+
+<!-- メイン画面 -->
+<div id="main-screen">
+  <div class="top-bar">
+    <span><strong id="my-name-top"></strong> としてログイン中</span>
+    <button class="switch-btn" onclick="switchUser()">切り替え</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" id="tab-status" onclick="showTab('status')">📊 ステータス</button>
+    <button class="tab-btn" id="tab-chat" onclick="showTab('chat')">💬 チャット</button>
+  </div>
+
+  <!-- ステータスタブ -->
+  <div id="status-tab">
+    <div class="card">
+      <div class="card-label">自分のステータス</div>
+      <div class="name-row">
+        <span class="name" id="my-name"></span>
+      </div>
+      <div class="status-buttons">
+        <button class="status-opt" id="btn-work" onclick="setStatus('work')">🟢 稼働中</button>
+        <button class="status-opt" id="btn-posting" onclick="setStatus('posting')">📝 投稿中</button>
+        <button class="status-opt" id="btn-saving" onclick="setStatus('saving')">💾 保存中</button>
+        <button class="status-opt" id="btn-off" onclick="setStatus('off')">⚫ 停止中</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">相手のステータス</div>
+      <div class="other-row">
+        <span class="other-name" id="other-name"></span>
+        <span class="other-st off" id="other-st">確認中...</span>
+      </div>
+      <div class="upd-time" id="other-upd"></div>
+      <div class="refresh-row">
+        <button class="refresh-btn" id="refresh-btn" onclick="fetchStatus()">🔄 更新</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- チャットタブ -->
+  <div id="chat-tab">
+    <div class="chat-box" id="chat-box">
+      <span class="chat-empty">メッセージはまだありません</span>
+    </div>
+    <div class="chat-input-row">
+      <textarea class="chat-input" id="chat-input" rows="1" placeholder="メッセージを入力..."
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendChat()">送信</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbwFxDAw5Xfn87sx3fZbNQPQTgvhxhblsrDbMIP-RlfY-y9RY3E93udomiG_369N8YE/exec';
+const USERS = { A: 'えみざ', B: 'うみ家' };
+const STATUS_INFO = {
+  work:    { text: '🟢 稼働中', cls: 'work' },
+  posting: { text: '📝 投稿中', cls: 'posting' },
+  saving:  { text: '💾 保存中', cls: 'saving' },
+  off:     { text: '⚫ 停止中', cls: 'off' },
+};
+
+let myKey = null;
+let currentStatus = 'off';
+let chatInterval = null;
+let statusInterval = null;
+
+function gasRequest(params) {
+  return new Promise((resolve, reject) => {
+    const cbName = '_gcb' + Date.now() + Math.floor(Math.random()*1000);
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      delete window[cbName]; script.remove(); reject(new Error('timeout'));
+    }, 10000);
+    window[cbName] = function(data) {
+      clearTimeout(timer); delete window[cbName]; script.remove(); resolve(data);
+    };
+    params.callback = cbName;
+    script.src = GAS_URL + '?' + new URLSearchParams(params).toString();
+    script.onerror = () => { clearTimeout(timer); delete window[cbName]; script.remove(); reject(new Error('error')); };
+    document.head.appendChild(script);
+  });
+}
+
+function selectUser(key) {
+  myKey = key;
+  try { localStorage.setItem('gw_page_user', key); } catch(e){}
+  document.getElementById('select-screen').style.display = 'none';
+  document.getElementById('main-screen').style.display = 'block';
+  document.getElementById('my-name-top').textContent = USERS[key];
+  document.getElementById('my-name').textContent = USERS[key];
+  document.getElementById('other-name').textContent = USERS[key === 'A' ? 'B' : 'A'];
+  try {
+    const s = localStorage.getItem('gw_page_status_' + key);
+    if (s && STATUS_INFO[s]) currentStatus = s;
+  } catch(e){}
+  updateMyUI();
+  fetchStatus();
+  statusInterval = setInterval(fetchStatus, 30000);
+}
+
+function switchUser() {
+  myKey = null;
+  if (statusInterval) clearInterval(statusInterval);
+  if (chatInterval) clearInterval(chatInterval);
+  document.getElementById('select-screen').style.display = 'flex';
+  document.getElementById('main-screen').style.display = 'none';
+  showTab('status');
+}
+
+function showTab(tab) {
+  document.getElementById('status-tab').style.display = tab === 'status' ? 'block' : 'none';
+  document.getElementById('chat-tab').style.display = tab === 'chat' ? 'block' : 'none';
+  document.getElementById('tab-status').className = 'tab-btn' + (tab === 'status' ? ' active' : '');
+  document.getElementById('tab-chat').className = 'tab-btn' + (tab === 'chat' ? ' active' : '');
+  if (tab === 'chat') {
+    fetchChat();
+    if (!chatInterval) chatInterval = setInterval(fetchChat, 10000);
+  } else {
+    if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
+  }
+}
+
+function updateMyUI() {
+  ['work','posting','saving','off'].forEach(s => {
+    document.getElementById('btn-' + s).className = 'status-opt' + (s === currentStatus ? ' active-' + s : '');
+  });
+}
+
+async function setStatus(status) {
+  currentStatus = status;
+  try { localStorage.setItem('gw_page_status_' + myKey, status); } catch(e){}
+  updateMyUI();
+  try {
+    await gasRequest({ key: myKey, active: status !== 'off', status: status });
+  } catch(e) { console.log('送信エラー:', e); }
+}
+
+async function fetchStatus() {
+  const btn = document.getElementById('refresh-btn');
+  if (btn) btn.textContent = '⏳';
+  const otherKey = myKey === 'A' ? 'B' : 'A';
+  try {
+    const data = await gasRequest({ t: Date.now() });
+    const other = data[otherKey];
+    const el = document.getElementById('other-st');
+    const upd = document.getElementById('other-upd');
+    if (!other) {
+      el.textContent = '情報なし'; el.className = 'other-st off'; upd.textContent = '';
+    } else {
+      const st = other.status || (other.active ? 'work' : 'off');
+      const info = STATUS_INFO[st] || STATUS_INFO['off'];
+      el.textContent = info.text; el.className = 'other-st ' + info.cls;
+      if (other.updated) {
+        const d = new Date(other.updated);
+        upd.textContent = '最終更新: ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+      }
+    }
+  } catch(e) {
+    const el = document.getElementById('other-st');
+    if (el) { el.textContent = '取得失敗'; el.className = 'other-st off'; }
+  }
+  if (btn) btn.textContent = '🔄 更新';
+}
+
+async function fetchChat() {
+  try {
+    const data = await gasRequest({ action: 'getChat', t: Date.now() });
+    const box = document.getElementById('chat-box');
+    const msgs = data.messages || [];
+    if (msgs.length === 0) {
+      box.innerHTML = '<span class="chat-empty">メッセージはまだありません</span>';
+      return;
+    }
+    const wasBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    box.innerHTML = msgs.map(m => {
+      const mine = m.key === myKey;
+      const d = new Date(m.time);
+      const hhmm = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+      return `<div class="msg-row ${mine ? 'mine' : 'theirs'}">
+        <div class="msg-name">${USERS[m.key] || m.key}</div>
+        <div class="msg-bubble">${escHtml(m.msg)}</div>
+        <div class="msg-time">${hhmm}</div>
+      </div>`;
+    }).join('');
+    if (wasBottom) box.scrollTop = box.scrollHeight;
+  } catch(e) { console.log('チャット取得エラー:', e); }
+}
+
+async function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+  input.value = '';
+  try {
+    await gasRequest({ action: 'sendChat', key: myKey, msg: msg });
+    await fetchChat();
+    const box = document.getElementById('chat-box');
+    box.scrollTop = box.scrollHeight;
+  } catch(e) { input.value = msg; }
+  btn.disabled = false;
+  input.focus();
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// 前回ユーザー記憶
+try {
+  const saved = localStorage.getItem('gw_page_user');
+  if (saved && USERS[saved]) selectUser(saved);
+} catch(e) {}
+</script>
