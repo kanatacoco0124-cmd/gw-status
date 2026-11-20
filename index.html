@@ -223,8 +223,9 @@ body {
     </div>
     <div class="chat-input-row">
       <textarea class="chat-input" id="chat-input" rows="1" placeholder="メッセージを入力..."
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-      <button class="send-btn" id="send-btn" onclick="sendChat()">送信</button>
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"
+        tabindex="1"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendChat()" tabindex="2">送信</button>
     </div>
   </div>
 </div>
@@ -381,6 +382,7 @@ async function sendChat() {
   } catch(e) { input.value = msg; }
   btn.disabled = false;
   input.focus();
+  input.setSelectionRange(0, 0);
 }
 
 function escHtml(s) {
