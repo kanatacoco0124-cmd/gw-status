@@ -114,7 +114,11 @@ body {
 .status-opt.active-work { border-color: var(--green); background: var(--green-soft); color: var(--green); }
 .status-opt.active-posting { border-color: var(--yellow); background: var(--yellow-soft); color: var(--yellow); }
 .status-opt.active-saving { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
-.status-opt.active-off { border-color: #cc4444; background: #2e1010; color: #ee6666; font-weight: 700; }
+.status-opt.active-off { border-color: #cc4444; background: #fde8e8; color: #cc2222; font-weight: 700; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .status-opt.active-off { background: #2e1010; color: #ee6666; }
+}
+:root[data-theme="dark"] .status-opt.active-off { background: #2e1010; color: #ee6666; }
 
 .other-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -152,6 +156,7 @@ body {
 .msg-row.mine .msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
 .msg-row.theirs .msg-bubble { background: var(--border); color: var(--fg); border-bottom-left-radius: 4px; }
 .msg-time { font-size: 0.68rem; color: var(--fg2); margin-top: 0.2rem; }
+.msg-read { font-size: 0.68rem; color: var(--accent); margin-top: 0.1rem; }
 .chat-empty { color: var(--fg2); font-size: 0.9rem; text-align: center; margin: auto; }
 
 .chat-input-row { display: flex; gap: 0.6rem; align-items: flex-end; }
@@ -348,7 +353,7 @@ async function fetchStatus() {
 
 async function fetchChat() {
   try {
-    const data = await gasRequest({ action: 'getChat', t: Date.now() });
+    const data = await gasRequest({ action: 'getChat', key: myKey, t: Date.now() });
     const box = document.getElementById('chat-box');
     const msgs = data.messages || [];
     if (msgs.length === 0) {
@@ -360,10 +365,13 @@ async function fetchChat() {
       const mine = m.key === myKey;
       const d = new Date(m.time);
       const hhmm = d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+      const readBy = m.readBy ? String(m.readBy) : '';
+      const isRead = mine && readBy.split(',').some(k => k.trim() && k.trim() !== myKey);
       return `<div class="msg-row ${mine ? 'mine' : 'theirs'}">
         <div class="msg-name">${USERS[m.key] || m.key}</div>
         <div class="msg-bubble">${escHtml(m.msg)}</div>
         <div class="msg-time">${hhmm}</div>
+        ${mine ? `<div class="msg-read">${isRead ? '既読' : ''}</div>` : ''}
       </div>`;
     }).join('');
     if (wasBottom) box.scrollTop = box.scrollHeight;
