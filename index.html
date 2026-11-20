@@ -258,7 +258,10 @@ body {
 <div id="main-screen">
   <div class="top-bar">
     <span><strong id="my-name-top"></strong> としてログイン中</span>
-    <button class="switch-btn" onclick="switchUser()">切り替え</button>
+    <div style="display:flex;gap:0.5rem;">
+      <button class="switch-btn" onclick="changePassword()">🔑 PW変更</button>
+      <button class="switch-btn" onclick="switchUser()">切り替え</button>
+    </div>
   </div>
   <div class="tabs">
     <button class="tab-btn active" id="tab-status" onclick="showTab('status')">📊 ステータス</button>
@@ -325,49 +328,83 @@ let chatInterval = null;
 let statusInterval = null;
 let currentPartner = null;
 
-function getPwKey(key) { return 'gw_pw_' + key; }
-
-function startLogin(key) {
+async function startLogin(key) {
   pendingKey = key;
-  const savedPw = localStorage.getItem(getPwKey(key));
   document.getElementById('select-screen').style.display = 'none';
   document.getElementById('pw-screen').style.display = 'flex';
   document.getElementById('pw-title').textContent = USERS[key] + ' でログイン';
   document.getElementById('pw-input').value = '';
   document.getElementById('pw-error').textContent = '';
-  if (savedPw) {
+  document.getElementById('pw-submit').textContent = '確認中...';
+  document.getElementById('pw-submit').disabled = true;
+  try {
+    const res = await gasRequest({ action: 'checkPw', key: key, pw: '__check__' });
+    if (res.notSet) {
+      document.getElementById('pw-desc').textContent = '初回です。新しいパスワードを設定してください';
+      document.getElementById('pw-submit').textContent = 'パスワードを設定してログイン';
+    } else {
+      document.getElementById('pw-desc').textContent = 'パスワードを入力してください';
+      document.getElementById('pw-submit').textContent = 'ログイン';
+    }
+  } catch(e) {
     document.getElementById('pw-desc').textContent = 'パスワードを入力してください';
     document.getElementById('pw-submit').textContent = 'ログイン';
-  } else {
-    document.getElementById('pw-desc').textContent = '初回です。新しいパスワードを設定してください';
-    document.getElementById('pw-submit').textContent = 'パスワードを設定してログイン';
   }
+  document.getElementById('pw-submit').disabled = false;
   setTimeout(() => document.getElementById('pw-input').focus(), 100);
 }
 
-function submitPassword() {
+async function submitPassword() {
   const input = document.getElementById('pw-input').value;
   if (!input) { document.getElementById('pw-error').textContent = 'パスワードを入力してください'; return; }
-  const savedPw = localStorage.getItem(getPwKey(pendingKey));
-  if (!savedPw) {
-    // 初回：パスワード設定
-    localStorage.setItem(getPwKey(pendingKey), input);
-    document.getElementById('pw-screen').style.display = 'none';
-    selectUser(pendingKey);
-  } else if (input === savedPw) {
-    document.getElementById('pw-screen').style.display = 'none';
-    selectUser(pendingKey);
-  } else {
-    document.getElementById('pw-error').textContent = 'パスワードが違います';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
+  const btn = document.getElementById('pw-submit');
+  btn.disabled = true;
+  btn.textContent = '確認中...';
+  document.getElementById('pw-error').textContent = '';
+  try {
+    const res = await gasRequest({ action: 'checkPw', key: pendingKey, pw: input });
+    if (res.notSet) {
+      // 初回設定
+      const setRes = await gasRequest({ action: 'setPw', key: pendingKey, newPw: input });
+      if (setRes.ok) {
+        document.getElementById('pw-screen').style.display = 'none';
+        selectUser(pendingKey);
+      } else {
+        document.getElementById('pw-error').textContent = '設定に失敗しました';
+      }
+    } else if (res.ok) {
+      document.getElementById('pw-screen').style.display = 'none';
+      selectUser(pendingKey);
+    } else {
+      document.getElementById('pw-error').textContent = 'パスワードが違います';
+      document.getElementById('pw-input').value = '';
+      document.getElementById('pw-input').focus();
+    }
+  } catch(e) {
+    document.getElementById('pw-error').textContent = '通信エラー、もう一度試して';
   }
+  btn.disabled = false;
+  btn.textContent = 'ログイン';
 }
 
 function backToSelect() {
   document.getElementById('pw-screen').style.display = 'none';
   document.getElementById('select-screen').style.display = 'flex';
   pendingKey = null;
+}
+
+async function changePassword() {
+  const oldPw = prompt('現在のパスワードを入力してください');
+  if (oldPw === null) return;
+  const newPw = prompt('新しいパスワードを入力してください');
+  if (!newPw) return;
+  const newPw2 = prompt('新しいパスワードをもう一度入力してください');
+  if (newPw !== newPw2) { alert('パスワードが一致しません'); return; }
+  try {
+    const res = await gasRequest({ action: 'setPw', key: myKey, oldPw: oldPw, newPw: newPw });
+    if (res.ok) alert('パスワードを変更しました！');
+    else alert(res.msg || '変更に失敗しました');
+  } catch(e) { alert('通信エラー'); }
 }
 
 function gasRequest(params) {
